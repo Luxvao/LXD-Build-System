@@ -1,0 +1,4 @@
+FROM debian/12
+
+RUN apt update -y
+RUN apt install neofetch -y
