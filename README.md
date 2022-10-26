@@ -5,8 +5,8 @@ Right now it supports:
 - Making a container
 - Choosing the base image
 - Running commands in the container
-# Stuff I'll add
 - Building images
+- Copying files from disk to container
+# Stuff I'll add
 - Volume management
 - Some way to configure containers
-- Copying files from disk to container

@@ -3,19 +3,26 @@
 #include <string>
 
 
-
-// Just to be clear; this function parses and builds the image
-void parse(std::string tokens[], int counter, std::string imageName) {
-    std::string containerName = imageName + "tmp";
+void parse(std::string tokens[], int counter, std::string imageName, bool buildImage) {
+    std::string containerName = "";
+    if (buildImage == true) {
+        containerName = imageName + "tmp";
+    }
+    else {
+        containerName = imageName;
+    }
     std::string baseImage = "";
 
-    // Put code here next!!!!
+    if (tokens[counter-1] != "END") {
+        std::cout << "You must end the lxdfile with the END instruction.\n";
+        exit(1);
+    }
+
     if (tokens[0] == "FROM") {
         if (tokens[1] == "RUN" || tokens[1] == "COPY" || tokens[1] == "FROM" || tokens[1] == "CONFIGURE") { std::cout << "Please specify the base container image!\n"; exit(1); }
         else {
             baseImage = tokens[1];
 
-            // Make a container
             std::cout << "Pulling base image and getting things ready...\n";
             std::string setupCmd = "lxc launch images:" + tokens[1] + " " + containerName;
             system(setupCmd.c_str());
@@ -24,12 +31,24 @@ void parse(std::string tokens[], int counter, std::string imageName) {
         for (int i = 2; i < counter; i++)
         {
             if (tokens[i] == "CONFIGURE") {
+                std::string configCmd = "";
+                for (int j = i+1; j < counter; j++) {
+                    if (tokens[j] == "RUN" || tokens[j] == "COPY" || tokens[j] == "FROM" || tokens[j] == "CONFIGURE" || tokens[j] == "END") {
+                        break;
+                    }
+                    else {
+                        configCmd += " ";
+                        configCmd += tokens[j];
+                    }
+                }
+            }
+            else if (tokens[i] == "DEVICES") {
 
             }
             else if (tokens[i] == "RUN") {
                 std::string runCmd = "lxc exec " + containerName + " --";
                 for (int j = i+1; j < counter; j++) {
-                    if (tokens[j] == "RUN" || tokens[j] == "COPY" || tokens[j] == "FROM" || tokens[j] == "CONFIGURE") {
+                    if (tokens[j] == "RUN" || tokens[j] == "COPY" || tokens[j] == "FROM" || tokens[j] == "CONFIGURE" || tokens[j] == "END") {
                         break;
                     }
                     else {
@@ -38,6 +57,21 @@ void parse(std::string tokens[], int counter, std::string imageName) {
                     }
                 }
                 system(runCmd.c_str());
+            }
+            else if (tokens[i] == "COPY") {
+                std::string copyCmd = "lxc file push ";
+                std::string file = "";
+                std::string dest = " " + containerName + "/";
+                if (tokens[i+4] == "RUN" || tokens[i+3] == "COPY" || tokens[i+3] == "FROM" || tokens[i+3] == "CONFIGURE" || tokens[i+3] == "END") {
+                    file = tokens[i+1];
+                    dest += tokens[i+2];
+                    copyCmd += file;
+                    copyCmd += dest;
+                    system(copyCmd.c_str());
+                }
+                else {
+                    std::cout << "ERROR -> " + tokens[i] + " " + tokens[i+1] + " " + tokens[i+2] + " <-\n";
+                }
             }
         }
         
@@ -51,8 +85,6 @@ void parse(std::string tokens[], int counter, std::string imageName) {
 
 
 int getCounter(std::string path) {
-
-    // Find out how many tokens are in the lxdfile
     int counter = 0;
     std::ifstream file;
 
@@ -77,7 +109,6 @@ int getCounter(std::string path) {
         while (token != prevToken) {
             counter++;
 
-            // Make sure we don't read more tokens then there actually are
             prevToken = token;
             file >> token;
         }
@@ -88,7 +119,7 @@ int getCounter(std::string path) {
 }
 
 
-void makeList(std::string path, std::string imageName) {
+void makeList(std::string path, std::string imageName, bool buildImage) {
     std::string tokenList[getCounter(path) - 1];
     std::ifstream file;
 
@@ -113,26 +144,67 @@ void makeList(std::string path, std::string imageName) {
 
     file.close();
 
-    parse(tokenList, getCounter(path), imageName);
+    parse(tokenList, getCounter(path), imageName, buildImage);
 
     return;
 }
 
 int main(int argc, char* argv[]) {
+    std::string path = "";
+    bool continueThrough = false;
+    std::string imageName = "";
+    bool buildImage = true;
+
+    if (argv[1] == NULL) { std::cout << "\nPlease ceeck out lbs -h.\n\n"; exit(1); }
+
     std::string arg1 = argv[1];
-    if (argc == 4 && arg1 == "-t") {
-        std::string imageName = argv[2];
-        std::string path = argv[3];
-        makeList(path, imageName);
+    std::string lArg = argv[argc-1];
 
-        // Run lxc publish here, okay?
-
-
+    for (int i = 1; i < argc; i++) {
+        std::string tmpArgs = argv[i];
+        if (tmpArgs == "-c") {
+            buildImage = false;
+        }
+        else if (tmpArgs == "-t") {
+            if (argc-1 == i+1 || argc-1 == i) {
+                std::cout << "You must specify the lxdfile location or must enter the container/image name\n";
+                exit(1);
+            }
+            imageName = argv[i+1];
+        }
     }
-    else if (arg1 == "-h" || arg1 == "--help") {
-        std::cout << "\nHelp menu:\n-h/--help - Shows this help screen\n-t - Is used to name the built image - lbs -t <image_name>\nThe 3rd argument should be the path to the folder containing the lxdfile or . (for current directory)\nIMPORTANT NOTE: Please remember that this tool requires excatly 3 arguments\n\n";
+    continueThrough = true;
+
+    if (lArg != "-c" && lArg != "-t") {
+        path = lArg;
     }
     else {
-        std::cout << "\nHelp menu:\n-h/--help - Shows this help screen\n-t - Is used to name the built image - lbs -t <image_name>\nThe 3rd argument should be the path to the folder containing the lxdfile or . (for current directory)\nIMPORTANT NOTE: Please remember that this tool requires excatly 3 arguments\n\n";
+        std::cout << "The last argument should be the lxdfile location\n";
+        exit(1);
+    }
+
+    if (arg1 == "-h" || arg1 == "--help") {
+        std::cout << "\nHelp menu:\n-h/--help - Shows this help screen\n-t - Is used to name the built image - lbs -t <image_name>\n-c - Is used when you want to just create a container from the lxdfile\nThe last argument should be the path to the folder containing the lxdfile or . (for current directory)\n\n";
+        exit(1);
+    }
+    else if (continueThrough != true) {
+        std::cout << "\nUnknows command. Please check out lbs -h\n\n";
+        exit(1);
+    }
+
+    makeList(path, imageName, buildImage);
+
+    if (buildImage == true) {
+        std::string buildCmd = "lxc publish " + imageName + "tmp " + "--alias=" + imageName;
+        std::string stopCmd = "lxc stop " + imageName + "tmp";
+        std::string cleanupCmd = "lxc rm " + imageName + "tmp";
+        system(stopCmd.c_str());
+        system(buildCmd.c_str());
+        std::cout << "Cleaning up...\n";
+        system(cleanupCmd.c_str());
+        std::cout << "The image is ready!\n";
+    }
+    else {
+        std::cout << "The container was created and set up!\n";
     }
 }

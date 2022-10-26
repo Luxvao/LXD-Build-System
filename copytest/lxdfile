@@ -1,0 +1,4 @@
+FROM debian/12
+
+COPY test.txt root/
+END
