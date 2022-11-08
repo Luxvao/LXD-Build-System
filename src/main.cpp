@@ -25,6 +25,9 @@ void parse(std::string tokens[], int counter, std::string imageName, bool buildI
 
     if (tokens[counter-1] != "END") {
         std::cout << "You must end the lxdfile with the END instruction.\n";
+        for (int i = 0; i < counter; i++) {
+            std::cout << tokens[i] << "\n";
+        }
         exit(1);
     }
 
@@ -40,8 +43,8 @@ void parse(std::string tokens[], int counter, std::string imageName, bool buildI
 
         for (int i = 2; i < counter; i++)
         {
-            if (tokens[i] == "CONFIGURE") {
-                std::string configCmd = "";
+            if (tokens[i] == "CONFIGUE") {
+                std::string configCmd = "lxc config set " + containerName + " ";
                 for (int j = i+1; j < counter; j++) {
                     if (tokens[j] == "RUN" || tokens[j] == "COPY" || tokens[j] == "FROM" || tokens[j] == "CONFIGURE" || tokens[j] == "END") {
                         break;
@@ -51,9 +54,23 @@ void parse(std::string tokens[], int counter, std::string imageName, bool buildI
                         configCmd += tokens[j];
                     }
                 }
+                system(configCmd.c_str());
             }
-            else if (tokens[i] == "DEVICES") {
+            else if (tokens[i] == "VOLUME") {
 
+            }
+            else if (tokens[i] == "DEVICEADD") {
+                std::string deviceCmd = "lxc config device add " + containerName + " ";
+                for (int j = i+1; j < counter; j++) {
+                    if (tokens[j] == "RUN" || tokens[j] == "COPY" || tokens[j] == "FROM" || tokens[j] == "CONFIGURE" || tokens[j] == "END") {
+                        break;
+                    }
+                    else {
+                        deviceCmd += " ";
+                        deviceCmd += tokens[j];
+                    }
+                }
+                system(deviceCmd.c_str());
             }
             else if (tokens[i] == "RUN") {
                 std::string runCmd = "lxc exec " + containerName + " --";
@@ -72,7 +89,7 @@ void parse(std::string tokens[], int counter, std::string imageName, bool buildI
                 std::string copyCmd = "lxc file push ";
                 std::string file = "";
                 std::string dest = " " + containerName + "/";
-                if (tokens[i+4] == "RUN" || tokens[i+3] == "COPY" || tokens[i+3] == "FROM" || tokens[i+3] == "CONFIGURE" || tokens[i+3] == "END") {
+                if (tokens[i+3] == "RUN" || tokens[i+3] == "COPY" || tokens[i+3] == "FROM" || tokens[i+3] == "CONFIGURE" || tokens[i+3] == "END") {
                     file = tokens[i+1];
                     dest += tokens[i+2];
                     copyCmd += file;
@@ -87,7 +104,7 @@ void parse(std::string tokens[], int counter, std::string imageName, bool buildI
         
     }
     else {
-        std::cout << "The first token should be FROM (so lbs can know what distro to use as the base system; do -h for help)\n";
+        std::cout << "The first token should be FROM (so lbs can know what image to use as the base system; do -h for help)\n";
     }
 
 }
