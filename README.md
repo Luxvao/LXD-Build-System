@@ -1,5 +1,5 @@
 # DEV branch
-This is a work in progress branch that has the latest features. All of the features here are not 100% finished.
+This is a work in progress branch that has the latest features. The features here are not 100% finished.
 Supports:
 - Making a container
 - Choosing the base image
