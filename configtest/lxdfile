@@ -1,6 +1,0 @@
-FROM debian/12
-
-RUN apt update
-RUN apt install nginx -y
-
-DEVICEADD host80 proxy listen=127.0.0.1:80 connect=127.0.0.1:80

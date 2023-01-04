@@ -1,0 +1,7 @@
+FROM debian/12
+
+/* This is a Test comment */
+
+RUN apt update
+RUN apt install neofetch
+END
